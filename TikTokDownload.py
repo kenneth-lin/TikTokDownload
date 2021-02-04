@@ -24,7 +24,7 @@ def printUsage():
     
 def Find(string): 
     # findall() 查找匹配正则表达式的字符串
-    url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
+    url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
     return url 
 
 def main():
@@ -86,7 +86,7 @@ if __name__=="__main__":
         'user-agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36 Edg/87.0.664.66'
     }
     r = requests.get(url = Find(urlarg)[0])
-    key = re.findall('video/(\d+)/',str(r.url))[0]
+    key = re.findall(r'video/(\d+)/',str(r.url))[0]
     
     jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={key}'    #官方接口
     js = json.loads(requests.get(url = jx_url,headers=headers).text)

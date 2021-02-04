@@ -16,16 +16,23 @@ class TikTok():
     downloadMusic = False
     downloadVideo = True
     downloadThumb = False
-    videoTimestamp = str(time.time())
+    videoTimestamp = "0"
+    maxTry = 80
     pageCount = 30
+
+    @staticmethod
+    def generateSignature(value):
+        p = os.popen('node fuck-byted-acrawler.js %s' % value)
+        return (p.readlines()[0]).strip()
 
     def __init__(self):
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36 Edg/87.0.664.66'
             }
+        # print("signature " + TikTok.generateSignature("1128"))
     #单视频下载
     def single_down(self,url,save):
-        key = re.findall('video/(\d+)/',url)[0]
+        key = re.findall(r'video/(\d+)/',url)[0]
         jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={key}'    #官方接口
         jss = json.loads(requests.get(url = jx_url,headers=self.headers).text)
         try:
@@ -93,9 +100,11 @@ class TikTok():
         #    key = re.findall('&sec_uid=(.*?)&',str(r.url))[0]
         result = []
         for i in range(self.pageCount):
-            subVideoList = self.getVideoList(mode,key,count)
+            subVideoList,tryTime = self.getVideoList(mode,key,count)
             result.extend(subVideoList)
-            if len(subVideoList) == 0 or len(result) > count:
+            if len(subVideoList) == 0 and tryTime == self.maxTry:
+                break
+            if len(result) > count:
                 break
         return result
 
@@ -110,14 +119,16 @@ class TikTok():
         while result == []:
             index = index + 1
             print('---正在进行第 %d 次尝试---\r' % index)
-            time.sleep(0.3)
+            time.sleep(0.2)
             response = requests.get(url = api_post_url,headers=header)
             html = json.loads(response.content.decode())
             if html['aweme_list'] != []:
                 result = html['aweme_list']
                 self.videoTimestamp = str(html['max_cursor'])
                 print('---抓获数据成功---\r')
-        return result
+            if self.maxTry < index:
+                break
+        return result,self.maxTry
 
 
     #获取用户主页信息
@@ -147,7 +158,7 @@ class TikTok():
     #匹配粘贴的url地址
     def Find(self,string): 
         # findall() 查找匹配正则表达式的字符串
-        url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
+        url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
         return url 
 
     #下载作品封面、原声、视频
@@ -266,6 +277,7 @@ if __name__ == "__main__":
     #返回个人主页api数据
     result = TiTk.get_info(count,mode,uid,save)
     #处理视频api数据
+    print("result length: " + str(len(result)))
     author_list,video_list,aweme_id,nickname,dynamic_cover = TiTk.video_info(count,result)
     #下载全部资源
     TiTk.download_all(count,author_list,video_list,aweme_id,nickname,dynamic_cover,mode,save)
