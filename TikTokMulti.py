@@ -10,8 +10,15 @@
 '''
 import requests,json,os,time,configparser,re
 import sys
+import time
 
 class TikTok():
+    downloadMusic = False
+    downloadVideo = True
+    downloadThumb = False
+    videoTimestamp = str(time.time())
+    pageCount = 30
+
     def __init__(self):
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36 Edg/87.0.664.66'
@@ -84,7 +91,17 @@ class TikTok():
         key = re.findall('&sec_uid=(.*?)&',str(r.url))[0]
         #if key == '':
         #    key = re.findall('&sec_uid=(.*?)&',str(r.url))[0]
-        api_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=0&aid=1128&_signature=RuMN1wAAJu7w0.6HdIeO2EbjDc&dytk=' % (mode,key,str(count))
+        result = []
+        for i in range(self.pageCount):
+            subVideoList = self.getVideoList(mode,key,count)
+            result.extend(subVideoList)
+            if len(subVideoList) == 0 or len(result) > count:
+                break
+        return result
+
+    def getVideoList(self,mode,key,count):
+        api_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=%s&aid=1128&_signature=RuMN1wAAJu7w0.6HdIeO2EbjDc&dytk=' % (mode,key,str(count),self.videoTimestamp)
+        print("api_post_url: "+ api_post_url)
         header = {
             'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'
             }
@@ -98,8 +115,10 @@ class TikTok():
             html = json.loads(response.content.decode())
             if html['aweme_list'] != []:
                 result = html['aweme_list']
+                self.videoTimestamp = str(html['max_cursor'])
                 print('---抓获数据成功---\r')
         return result
+
 
     #获取用户主页信息
     def video_info(self,count,result):
@@ -144,25 +163,34 @@ class TikTok():
                 js = json.loads(requests.get(url = jx_url,headers=self.headers).text)
                 music_url = str(js['item_list'][0]['music']['play_url']['url_list'][0])
                 music_title = str(js['item_list'][0]['music']['author'])
-                r=requests.get(music_url)
-                print('音频 ',music_title,'    下载中\r')
-                with open(save + mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '.mp3','wb') as f:
-                    f.write(r.content)
+                if self.downloadMusic:
+                    savePath = save + mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '.mp3'
+                    if not os.path.exists(savePath):
+                        r=requests.get(music_url)
+                        print('音频 ',music_title,'    下载中\r')
+                        with open(savePath,'wb') as f:
+                            f.write(r.content)
             except:
                 if music_url == '':
                     print('该音频目前不可用\r')
                 else:
                     pass
             try:
-                video = requests.get(video_list[i])
-                #保存视频
-                print('视频 ',author_list[i],'    下载中\r')
-                with open(save + mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.mp4','wb') as f:
-                    f.write(video.content)
+                if self.downloadVideo:
+                    savePath = save + mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.mp4'
+                    if not os.path.exists(savePath):
+                        video = requests.get(video_list[i])
+                        #保存视频
+                        print('视频 ',author_list[i],'    下载中\r')
+                        with open(savePath,'wb') as f:
+                            f.write(video.content)
                 #保存视频动态封面
-                dynamic = requests.get(dynamic_cover[i])
-                with open(save + mode + '\\'+ nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.webp','wb') as f:
-                    f.write(dynamic.content)
+                if self.downloadThumb:
+                    savePath = save + mode + '\\'+ nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.webp'
+                    if not os.path.exists(savePath):
+                        dynamic = requests.get(dynamic_cover[i])
+                        with open(savePath,'wb') as f:
+                            f.write(dynamic.content)
             except:    
                 pass
         sys.exit(input('....下载完成，按任意键退出....'))

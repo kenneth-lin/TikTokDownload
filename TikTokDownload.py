@@ -61,12 +61,13 @@ def download(video_url,music_url,video_title,music_title,headers,musicarg):
         r=requests.get(url=video_url,headers=headers)
         if video_title == '':
             video_title = '此视频没有文案_%s' % music_title
-        with open(f'{video_title}.mp4','wb') as f:
+        with open(f'./download/{video_title}.mp4','wb') as f:
             f.write(r.content)
 
     if music_url == '':
-        input('下载出错，按任意键退出。。。')
-        return
+        # input('下载出错，按任意键退出。。。')
+        print('音乐路径为空，不下载。。。')
+        # return
     else:
         #原声下载
         if musicarg != 'yes':
@@ -74,7 +75,7 @@ def download(video_url,music_url,video_title,music_title,headers,musicarg):
             return
         else:
             r=requests.get(url=music_url,headers=headers)
-            with open(f'{music_title}.mp3','wb') as f:
+            with open(f'./download/{music_title}.mp3','wb') as f:
                 f.write(r.content)
             input('下载完成，按任意键退出。。。')
             return
@@ -86,9 +87,10 @@ if __name__=="__main__":
     }
     r = requests.get(url = Find(urlarg)[0])
     key = re.findall('video/(\d+)/',str(r.url))[0]
+    
     jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={key}'    #官方接口
     js = json.loads(requests.get(url = jx_url,headers=headers).text)
-
+    print(str(js['item_list'][0]['music']['play_url']))
     try:
         video_url = str(js['item_list'][0]['video']['play_addr']['url_list'][0]).replace('playwm','play')   #去水印后链接
     except:
